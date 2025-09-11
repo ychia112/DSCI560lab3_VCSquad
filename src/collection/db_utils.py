@@ -1,0 +1,155 @@
+"""
+db_utils.py
+Shared MySQL helpers for Lab3 (stocks project).
+
+- Loads DB config from environment variables (.env supported)
+- Provides a typed DBConfig and connect_db()
+- Exposes a reusable UPSERT SQL for stock_prices
+- Convenience helpers: exec_many (batch insert), fetch_scalar, fetch_all, get_last_dt
+"""
+
+from __future__ import annotations
+import os
+from dataclasses import dataclass
+from typing import Iterable, List, Optional, Sequence, Tuple, Any
+import mysql.connector as mysql
+from mysql.connector import MySQLConnection, CMySQLConnection  # type: ignore
+from dotenv import load_dotenv
+
+# Load .env if present
+load_dotenv()
+
+# ---------- Configuration ----------
+
+@dataclass(frozen=True)
+class DBConfig:
+    host: str = os.getenv("MYSQL_HOST", "localhost")
+    port: int = int(os.getenv("MYSQL_PORT", "3306"))
+    user: str = os.getenv("MYSQL_USER", "root")
+    password: str = os.getenv("MYSQL_PASSWORD", "")
+    database: str = os.getenv("MYSQL_DB", "stocks_db")
+
+def connect_db(cfg: Optional[DBConfig] = None) -> MySQLConnection:
+    """
+    Create a MySQL connection using the provided DBConfig (or env defaults).
+    Caller is responsible for closing the connection.
+    """
+    cfg = cfg or DBConfig()
+    return mysql.connect(
+        host=cfg.host,
+        port=cfg.port,
+        user=cfg.user,
+        password=cfg.password,
+        database=cfg.database,
+        autocommit=False,
+    )
+
+# ---------- Shared SQL Snippets ----------
+
+# Reusable UPSERT for stock_prices table
+UPSERT_STOCK_PRICES_SQL = """
+INSERT INTO stock_prices
+(ticker, dt, `open`, high, low, `close`, adj_close, volume, `interval`)
+VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+ON DUPLICATE KEY UPDATE
+  `open`=VALUES(`open`),
+  `high`=VALUES(`high`),
+  `low`=VALUES(`low`),
+  `close`=VALUES(`close`),
+  `adj_close`=VALUES(`adj_close`),
+  `volume`=VALUES(`volume`);
+"""
+
+SQL_GET_LAST_DT = """
+SELECT MAX(dt) FROM stock_prices WHERE ticker=%s AND `interval`=%s
+"""
+
+# ---------- Small utility helpers ----------
+
+def exec_many(
+    conn: MySQLConnection,
+    sql: str,
+    rows: Sequence[Sequence[Any]],
+    batch_size: int = 2000,
+) -> int:
+    """
+    Execute executemany in batches. Returns total affected rows (input length).
+    Rolls back and re-raises on error.
+    """
+    if not rows:
+        return 0
+    cur = conn.cursor()
+    total = 0
+    try:
+        for i in range(0, len(rows), batch_size):
+            chunk = rows[i : i + batch_size]
+            cur.executemany(sql, chunk)
+            conn.commit()
+            total += len(chunk)
+        return total
+    except mysql.Error:
+        conn.rollback()
+        raise
+    finally:
+        cur.close()
+
+def fetch_scalar(conn: MySQLConnection, sql: str, params: Sequence[Any] = ()) -> Any:
+    """
+    Run a SELECT that returns a single value (first column of first row).
+    """
+    cur = conn.cursor()
+    try:
+        cur.execute(sql, params)
+        row = cur.fetchone()
+        return row[0] if row else None
+    finally:
+        cur.close()
+
+def fetch_all(conn: MySQLConnection, sql: str, params: Sequence[Any] = ()) -> List[tuple]:
+    """
+    Run a SELECT and return all rows as list of tuples.
+    """
+    cur = conn.cursor()
+    try:
+        cur.execute(sql, params)
+        return list(cur.fetchall())
+    finally:
+        cur.close()
+
+def get_last_dt(conn: MySQLConnection, ticker: str, interval: str) -> Optional[Any]:
+    """
+    Convenience wrapper around SQL_GET_LAST_DT.
+    Returns Python datetime or None.
+    """
+    return fetch_scalar(conn, SQL_GET_LAST_DT, (ticker, interval))
+
+# ---------- Domain-specific row builder (optional but handy) ----------
+
+def build_stock_price_rows(df) -> List[tuple]:
+    """
+    Convert a tidy pandas DataFrame with columns:
+      ['ticker','dt','open','high','low','close','adj_close','volume','interval']
+    into a list of tuples for UPSERT_STOCK_PRICES_SQL.
+
+    Note: This function is optional—use it if you prefer a common row format builder.
+    """
+    import pandas as pd  # local import to keep this module lightweight if pandas isn't installed elsewhere
+
+    rows: List[tuple] = []
+    for r in df.itertuples(index=False):
+        # Ensure naive datetime for MySQL DATETIME
+        dt = pd.Timestamp(r.dt).to_pydatetime().replace(tzinfo=None)
+        rows.append(
+            (
+                r.ticker,
+                dt,
+                None if pd.isna(r.open) else float(r.open),
+                None if pd.isna(r.high) else float(r.high),
+                None if pd.isna(r.low) else float(r.low),
+                None if pd.isna(r.close) else float(r.close),
+                None if pd.isna(r.adj_close) else float(r.adj_close),
+                None if pd.isna(r.volume) else int(r.volume),
+                r.interval,
+            )
+        )
+    return rows

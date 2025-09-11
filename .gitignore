@@ -1,0 +1,39 @@
+# ---- Python ----
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# ---- Virtual env ----
+.venv/
+env/
+venv/
+
+# ---- Jupyter / VSCode ----
+.ipynb_checkpoints/
+.vscode/
+*.code-workspace
+
+# ---- Environment / Config ----
+# 本機密碼放 .env，不要推到 GitHub
+.env
+*.secret.json
+
+# ---- Data / Artifacts ----
+artifacts/
+*.csv
+*.tsv
+*.json
+*.sql
+*.db
+
+# ---- Logs ----
+*.log
+logs/
+
+# ---- OS / Editor ----
+.DS_Store
+Thumbs.db
