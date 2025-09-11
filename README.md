@@ -22,3 +22,8 @@ After created the db, you can run the data collection pipeline from the root of 
 python -m src.collection.data_collection --config seed_config.json --export-csv artifacts/test_collection.csv
 ```
 It'll save a csv file in `artifacts/` and also save the data into the database.
+
+If you want to get the latest data, run `update_latest.py` when data_collection.py has been done.
+```
+python -m src.collection.update_latest --tickers GOOG AMZN AAPL MSFT NFLX --interval 1d
+```
