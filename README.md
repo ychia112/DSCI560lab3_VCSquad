@@ -1,6 +1,6 @@
 # Data Collection Initial Edition 
 
-Before data basing pipeline created, I create a temporary database `stock_db` by running `temp_create_stockdb.sql`.
+Before data basing pipeline created, I create a temporary database `stock_db` by running `schema.sql`.
 
 You can first create a `.env` file like this:
 ```
