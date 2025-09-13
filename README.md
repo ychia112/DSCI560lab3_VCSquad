@@ -14,7 +14,7 @@ MYSQL_PORT = 3306
 Then run this:
 
 ```bash
-mysql -u username -p < temp_create_stockdb.sql
+mysql -u username -p < schema.sql
 ```
 
 After created the db, you can run the data collection pipeline from the root of repo:
