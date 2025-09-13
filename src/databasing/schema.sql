@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS portfolio(
 );
 
 -- 2. Stock_list (Not used for now, kept as backup)
--- Usage: List all the stock in database (ensures no duplicates)
+-- List all the stock in database (ensures no duplicates)
 CREATE TABLE IF NOT EXISTS stock_list(
     ticker VARCHAR(10) PRIMARY KEY,
     name VARCHAR(100),
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS stock_list(
 
 
 -- 3. stock_prices
--- Usage: Stores all the stock data into database
+-- Stores all the stock data into database
 CREATE TABLE IF NOT EXISTS stock_prices (
     id INT AUTO_INCREMENT PRIMARY KEY,
     ticker VARCHAR(10) NOT NULL,

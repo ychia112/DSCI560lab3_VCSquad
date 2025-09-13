@@ -6,7 +6,7 @@ from config import DB_CONFIG
 
 def insert_dataframe(df):
     """_summary_
-    Usage: insert the data we fetch from yfinance into database (stock_prices)
+    Insert the data we fetch from yfinance into database (stock_prices)
 
     Args:
         df (pd.DataFrame): input dataframe, columns needs to contain ticker, date, open, high, low, close, volume.
