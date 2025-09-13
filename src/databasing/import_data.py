@@ -9,7 +9,7 @@ def insert_dataframe(df):
     Insert the data we fetch from yfinance into database (stock_prices)
 
     Args:
-        df (pd.DataFrame): input dataframe, columns needs to contain ticker, date, open, high, low, close, volume.
+        df (pd.DataFrame): input dataframe, columns needs to contain ticker, dt, open, high, low, close, volume.
     """
     
     try:
@@ -18,22 +18,26 @@ def insert_dataframe(df):
 
         for _, row in df.iterrows():
             cursor.execute("""
-                INSERT INTO stock_prices (ticker, date, open, high, low, close, volume)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO stock_prices 
+                    (ticker, dt, open, high, low, close, adj_close, volume, `interval`)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON DUPLICATE KEY UPDATE
                     open=VALUES(open),
                     high=VALUES(high),
                     low=VALUES(low),
                     close=VALUES(close),
+                    adj_close=VALUES(adj_close),
                     volume=VALUES(volume)
             """, (
                 row["ticker"],
-                row["date"],
+                row["dt"],
                 row["open"],
                 row["high"],
                 row["low"],
                 row["close"],
-                row["volume"]
+                row["adj_close"],
+                row["volume"],
+                row.get("interval", "1d")
             ))
 
         conn.commit()

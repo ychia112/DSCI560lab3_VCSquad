@@ -34,14 +34,16 @@ CREATE TABLE IF NOT EXISTS stock_list(
 CREATE TABLE IF NOT EXISTS stock_prices (
     id INT AUTO_INCREMENT PRIMARY KEY,
     ticker VARCHAR(10) NOT NULL,
-    date DATE NOT NULL,
-    open DECIMAL(10,2),
-    high DECIMAL(10,2),
-    low DECIMAL(10,2),
-    close DECIMAL(10,2),
+    dt DATE NOT NULL,
+    open DECIMAL(10,4),
+    high DECIMAL(10,4),
+    low DECIMAL(10,4),
+    close DECIMAL(10,4),
+    adj_close DECIMAL(10,4),
     volume BIGINT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_price (ticker, date)
+    `interval` VARCHAR(8) NOT NULL DEFAULT '1d',
+    ingested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_price (ticker, dt, `interval`)
 );
 
 
