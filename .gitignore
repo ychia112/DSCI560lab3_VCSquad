@@ -27,7 +27,7 @@ artifacts/
 *.csv
 *.tsv
 *.json
-*.sql
+# *.sql
 *.db
 
 # ---- Logs ----
