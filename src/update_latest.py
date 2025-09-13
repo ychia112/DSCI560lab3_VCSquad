@@ -10,7 +10,7 @@ import pandas as pd
 import yfinance as yf
 from datetime import datetime, timedelta
 
-from .db_utils import (
+from db_utils import (
     DBConfig,
     connect_db,
     UPSERT_STOCK_PRICES_SQL,
