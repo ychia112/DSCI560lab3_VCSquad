@@ -7,7 +7,7 @@ You can first create a `.env` file like this:
 MYSQL_HOST = localhost
 MYSQL_USER = #yourUserName
 MYSQL_PASSWORD = #yourPassword
-MYSQL_DB = stocks_db
+MYSQL_DB = stock_db
 MYSQL_PORT = 3306
 ```
 
