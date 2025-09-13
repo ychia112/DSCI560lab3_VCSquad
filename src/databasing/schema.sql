@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS stock_list(
 CREATE TABLE IF NOT EXISTS stock_prices (
     id INT AUTO_INCREMENT PRIMARY KEY,
     ticker VARCHAR(10) NOT NULL,
-    dt DATE NOT NULL,
+    dt DATETIME NOT NULL,
     open DECIMAL(10,4),
     high DECIMAL(10,4),
     low DECIMAL(10,4),
