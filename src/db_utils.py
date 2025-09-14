@@ -16,6 +16,9 @@ import mysql.connector as mysql
 from mysql.connector import MySQLConnection, CMySQLConnection, Error  # type: ignore
 from dotenv import load_dotenv
 import pandas as pd
+import warnings
+
+warnings.filterwarnings("ignore", category=UserWarning, module="pandas")
 
 # Load .env if present
 load_dotenv()
