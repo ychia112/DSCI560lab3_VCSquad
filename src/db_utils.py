@@ -162,9 +162,12 @@ def build_stock_price_rows(df) -> List[tuple]:
 # GET portfolio list
 def get_portfolio():
     conn = connect_db()
-    df = pd.read_sql("SELECT * FROM portfolio", conn)
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM portfolio")
+    rows = cursor.fetchall()
+    cursor.close()
     conn.close()
-    return df
+    return pd.DataFrame(rows)
 
 # Insert stock into portfolio
 def add_stock(ticker):
