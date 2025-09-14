@@ -13,8 +13,9 @@ import os
 from dataclasses import dataclass
 from typing import Iterable, List, Optional, Sequence, Tuple, Any
 import mysql.connector as mysql
-from mysql.connector import MySQLConnection, CMySQLConnection  # type: ignore
+from mysql.connector import MySQLConnection, CMySQLConnection, Error  # type: ignore
 from dotenv import load_dotenv
+import pandas as pd
 
 # Load .env if present
 load_dotenv()
@@ -157,14 +158,14 @@ def build_stock_price_rows(df) -> List[tuple]:
 # portfolio actions
 # GET portfolio list
 def get_portfolio():
-    conn = get_connection()
+    conn = MySQLConnection
     df = pd.read_sql("SELECT * FROM portfolio", conn)
     conn.close()
     return df
 
 # Insert stock into portfolio
 def add_stock(ticker):
-    conn = get_connection()
+    conn = MySQLConnection
     cursor = conn.cursor()
     try:
         cursor.execute("INSERT IGNORE INTO portfolio (ticker) VALUES (%s)", (ticker,))
@@ -177,7 +178,7 @@ def add_stock(ticker):
 
 # Delete stock from portfolio
 def remove_stock(ticker):
-    conn = get_connection()
+    conn = MySQLConnection
     cursor = conn.cursor()
     try:
         cursor.execute("DELETE FROM portfolio WHERE ticker = %s", (ticker,))
@@ -192,14 +193,14 @@ def remove_stock(ticker):
 # Searching
 # GET whole stock_prices table
 def get_all_data():
-    conn = get_connection()
+    conn = MySQLConnection
     df = pd.read_sql("SELECT * FROM stock_prices ORDER BY ticker, dt", conn)
     conn.close()
     return df
 
 # GET latest close price of ticker
 def get_latest_price(ticker):
-    conn = get_connection()
+    conn = MySQLConnection
     query = """
         SELECT dt, close
         FROM stock_prices
@@ -213,7 +214,7 @@ def get_latest_price(ticker):
 
 # GET specific one stock history data
 def get_stock_history(ticker: str, start_date: str = None, end_date: str = None):
-    conn = get_connection()
+    conn = MySQLConnection
     query = """
         SELECT ticker, dt, open, high, low, close, adj_close, volume, `interval`
         FROM stock_prices
@@ -240,7 +241,7 @@ def get_stock_history(ticker: str, start_date: str = None, end_date: str = None)
 
 # GET ALL latest prices of tickers in portfolio
 def get_all_latest_prices():
-    conn = get_connection()
+    conn = MySQLConnection
     query = """
         SELECT t1.ticker, t1.dt, t1.close, t1.adj_close, t1.volume
         FROM stock_prices t1
