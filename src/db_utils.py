@@ -158,18 +158,25 @@ def build_stock_price_rows(df) -> List[tuple]:
 # portfolio actions
 # GET portfolio list
 def get_portfolio():
-    conn = MySQLConnection
+    conn = connect_db()
     df = pd.read_sql("SELECT * FROM portfolio", conn)
     conn.close()
     return df
 
 # Insert stock into portfolio
 def add_stock(ticker):
-    conn = MySQLConnection
+    conn = connect_db()
     cursor = conn.cursor()
     try:
+        cursor.execute("SELECT COUNT(*) FROM stock_prices WHERE ticker=%s", (ticker,))
+        exists = cursor.fetchone()[0] > 0
+        if not exists:
+            print(f"{ticker} not found in stock_prices, cannot add.")
+            return
+
         cursor.execute("INSERT IGNORE INTO portfolio (ticker) VALUES (%s)", (ticker,))
         conn.commit()
+        print(f"Added {ticker} to portfolio")
     except Error as e:
         print(f"Error: {e}")
     finally:
@@ -178,11 +185,18 @@ def add_stock(ticker):
 
 # Delete stock from portfolio
 def remove_stock(ticker):
-    conn = MySQLConnection
+    conn = connect_db()
     cursor = conn.cursor()
     try:
+        cursor.execute("SELECT COUNT(*) FROM portfolio WHERE ticker=%s", (ticker,))
+        exists = cursor.fetchone()[0] > 0
+        if not exists:
+            print(f"{ticker} not found in portfolio, nothing removed.")
+            return
+
         cursor.execute("DELETE FROM portfolio WHERE ticker = %s", (ticker,))
         conn.commit()
+        print(f"Removed {ticker} from portfolio")
     except Error as e:
         print(f"Error: {e}")
     finally:
@@ -193,14 +207,14 @@ def remove_stock(ticker):
 # Searching
 # GET whole stock_prices table
 def get_all_data():
-    conn = MySQLConnection
+    conn = connect_db()
     df = pd.read_sql("SELECT * FROM stock_prices ORDER BY ticker, dt", conn)
     conn.close()
     return df
 
 # GET latest close price of ticker
 def get_latest_price(ticker):
-    conn = MySQLConnection
+    conn = connect_db()
     query = """
         SELECT dt, close
         FROM stock_prices
@@ -214,7 +228,7 @@ def get_latest_price(ticker):
 
 # GET specific one stock history data
 def get_stock_history(ticker: str, start_date: str = None, end_date: str = None):
-    conn = MySQLConnection
+    conn = connect_db()
     query = """
         SELECT ticker, dt, open, high, low, close, adj_close, volume, `interval`
         FROM stock_prices
@@ -241,7 +255,7 @@ def get_stock_history(ticker: str, start_date: str = None, end_date: str = None)
 
 # GET ALL latest prices of tickers in portfolio
 def get_all_latest_prices():
-    conn = MySQLConnection
+    conn = connect_db()
     query = """
         SELECT t1.ticker, t1.dt, t1.close, t1.adj_close, t1.volume
         FROM stock_prices t1
