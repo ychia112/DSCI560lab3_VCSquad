@@ -2,8 +2,8 @@ import os, warnings
 import numpy as np
 import pandas as pd
 import yfinance as yf
+from pathlib import Path
 from statsmodels.tsa.statespace.sarimax import SARIMAX
-
 warnings.filterwarnings("ignore")
 
 TICKERS       = ["AAPL", "GOOG", "MSFT", "NFLX", "AMZN"]
@@ -14,16 +14,17 @@ YEARS_AHEAD   = 2
 TRADING_DAYS  = 252
 FORECAST_STEPS = YEARS_AHEAD * TRADING_DAYS
 
-# Small, fast set of ARIMA orders; drift via trend='t' to avoid flat forecast
+TEST_DAYS     = 252  # Full trading year
+
+# Small, fast set of ARIMA orders; drift via trend = "t" to avoid flat forecast
 CANDIDATE_ORDERS = [(1,1,1), (0,1,1), (1,1,0), (2,1,1), (1,1,2), (2,1,0), (0,1,2)]
 DRIFT_TREND = "t"
 FIT_KW = dict(disp=False, method="lbfgs", maxiter=200)
 
-# Simple signals: fast/slow moving average crossover
 FAST_MA = 10
 SLOW_MA = 30
 
-OUTPUT_DIR    = # Your directory
+OUTPUT_DIR    = r"C:\Users\theka\Downloads"# Your directory to save csv
 FORECAST_CSV  = "Stocks_forecast.csv"
 SIGNALS_CSV   = "Stocks_signals.csv"
 
@@ -43,7 +44,6 @@ def next_bday(d: pd.Timestamp) -> pd.Timestamp:
     return pd.bdate_range(start=d + pd.Timedelta(days=1), periods=1)[0]
 
 def fit_quick_sarimax_with_drift(y: pd.Series):
-    """Pick best AIC across a small set; fallback to (0,1,0) with drift."""
     best, best_aic = None, np.inf
     fallback = None
     for order in CANDIDATE_ORDERS + [(0,1,0)]: 
@@ -65,7 +65,7 @@ def fit_quick_sarimax_with_drift(y: pd.Series):
     raise RuntimeError("No model converged.")
 
 def ma_crossover_signals(close: pd.Series, fast: int = FAST_MA, slow: int = SLOW_MA) -> pd.Series:
-    """Simple rule: buy if fast>slow, sell if fast<slow, else hold (NaNs -> hold)."""
+    # Signal rule: buy if fast > slow, sell if fast < slow, else hold
     px = pd.to_numeric(close, errors="coerce").astype(float)
     fast_ma = px.rolling(fast).mean()
     slow_ma = px.rolling(slow).mean()
@@ -73,6 +73,12 @@ def ma_crossover_signals(close: pd.Series, fast: int = FAST_MA, slow: int = SLOW
     sig = np.where(diff > 0, "buy", np.where(diff < 0, "sell", "hold"))
     sig[(fast_ma.isna() | slow_ma.isna()).values] = "hold"
     return pd.Series(sig, index=px.index, dtype=object)
+
+def mae(y_true: pd.Series, y_pred: pd.Series) -> float:
+    y_true = pd.to_numeric(y_true, errors="coerce")
+    y_pred = pd.to_numeric(y_pred, errors="coerce")
+    e = (y_true - y_pred).abs()
+    return float(e.mean())
 
 histories = {}
 last_dates = {}
@@ -124,7 +130,29 @@ for t in TICKERS:
         signals_df[t]  = "hold"
         continue
 
-    # Fit SARIMAX with drift
+    # MAE on last trading year
+    if len(y) > TEST_DAYS + 5:
+        split = len(y) - TEST_DAYS
+        y_train = y.iloc[:split]
+        y_test  = y.iloc[split:]
+        n_test  = len(y_test)
+        try:
+            res_train, _ = fit_quick_sarimax_with_drift(y_train)
+            y_pred = pd.Series(
+                res_train.get_forecast(steps=n_test).predicted_mean.values,
+                index=y_test.index
+            )
+        except Exception:
+            # linear drift fallback
+            tail  = y_train.tail(20)
+            slope = (tail.iloc[-1] - tail.iloc[0]) / max(len(tail) - 1, 1) if len(tail) >= 2 else 0.0
+            base  = y_train.iloc[-1]
+            y_pred = pd.Series(base + slope * np.arange(1, n_test + 1, dtype=float), index=y_test.index)
+        metric_val = mae(y_test, y_pred)
+        print(f"[MAE] {t}: {metric_val:.4f} over last {n_test} days")
+    else:
+        print(f"[MAE] {t}: not enough history to evaluate (have {len(y)} rows)")
+
     try:
         res, _ = fit_quick_sarimax_with_drift(y)
     except Exception as e:
@@ -141,7 +169,6 @@ for t in TICKERS:
         if res is not None:
             f_vals = res.get_forecast(steps=steps_needed).predicted_mean.values
         else:
-            # linear drift fallback from last 20 closes
             tail  = y.tail(20)
             slope = (tail.iloc[-1] - tail.iloc[0]) / max(len(tail) - 1, 1) if len(tail) >= 2 else 0.0
             base  = y.iloc[-1]
@@ -156,12 +183,12 @@ for t in TICKERS:
         combined_close.loc[f_future.index] = f_future.values
     combined_close = combined_close.reindex(global_dates)
 
-    # Round to 2 decimals for forecast output
     forecast_df[t] = pd.to_numeric(combined_close, errors="coerce").round(2).values
 
+    # Simple MA-crossover signals
     signals_df[t]  = ma_crossover_signals(combined_close).values
 
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+Path(OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
 f_path = safe_to_csv(forecast_df, os.path.join(OUTPUT_DIR, FORECAST_CSV))
 s_path = safe_to_csv(signals_df,  os.path.join(OUTPUT_DIR, SIGNALS_CSV))
 
