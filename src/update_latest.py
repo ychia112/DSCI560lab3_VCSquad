@@ -1,10 +1,3 @@
-# src/collection/update_latest.py
-# Usage:
-#   python -m src.collection.update_latest --tickers AAPL MSFT --interval 1d
-#
-# This script checks the last available datetime for each ticker in the DB,
-# then fetches new data from yfinance to "today", and upserts the new rows.
-
 import argparse
 import pandas as pd
 import yfinance as yf

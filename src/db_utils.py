@@ -1,13 +1,3 @@
-"""
-db_utils.py
-Shared MySQL helpers for Lab3 (stocks project).
-
-- Loads DB config from environment variables (.env supported)
-- Provides a typed DBConfig and connect_db()
-- Exposes a reusable UPSERT SQL for stock_prices
-- Convenience helpers: exec_many (batch insert), fetch_scalar, fetch_all, get_last_dt
-"""
-
 from __future__ import annotations
 import os
 from dataclasses import dataclass
