@@ -1,12 +1,3 @@
-# src/collection/data_collection.py
-# Usage:
-#   (A) With config file:
-#       python -m src.collection.data_collection --config seed_config.json --export-csv artifacts/seed.csv
-#   (B) With CLI args:
-#       python -m src.collection.data_collection --tickers GOOG AMZN AAPL MSFT NFLX --start 2015-01-01 --end 2025-09-10 --interval 1d --validate
-#
-# Note: If running as a standalone script, adjust imports accordingly.
-
 from __future__ import annotations
 import os
 import json
