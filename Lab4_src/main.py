@@ -6,13 +6,13 @@ import yfinance as yf
 
 from trading_env import TradingEnvironment, Evaluation
 # 2 algorithm
-import algo_1 as algo1
-import algo_2 as algo2
+#import algo_1 as algo1
+#import algo_2 as algo2
 
 # Helper Functions
 def load_prices(tickers):
     today = datetime.today().strftime("%Y-%m-%d")
-    data = yf.download(tickers, end=today)  
+    data = yf.download(tickers, end=today, auto_adjust=False, progress=False)  
     prices_open = data["Open"]
     prices_close = data["Close"]
     return prices_open, prices_close
@@ -33,6 +33,11 @@ def align_signals_to_prices(signals_or_weights, prices_close):
 # Flows
 def run_live_flow(pred_file, mode, cash):
     pred = pd.read_csv(pred_file, index_col=0, parse_dates=True)
+
+    # Normalize Date format
+    pred.index = pd.to_datetime(pred.index, errors="coerce")
+    pred.index = pred.index.normalize()
+    
     today = pd.to_datetime(datetime.today().strftime("%Y-%m-%d"))
     pred = pred.loc[pred.index <= today]
     if pred.empty:
@@ -53,10 +58,16 @@ def run_live_flow(pred_file, mode, cash):
     # Evaluation
     values = Evaluation.value_series(ledger)
     print("\nLatest Performance (up to today):")
-    print(ledger.tail(1))
+    print(ledger.tail(3))
+    print()
     print("Annualized Return:", Evaluation.annualized_return(values))
     print("Sharpe Ratio:", Evaluation.sharpe(values))
     print("Max Drawdown:", Evaluation.max_drawdown(values))
+    print()
+    
+    # print("pred last index:", pred.index.max())
+    # print("prices_close last index:", prices_close.index.max())
+    # print("intersection last index:", pred.index.intersection(prices_close.index).max())
 
     return ledger
 
@@ -85,6 +96,7 @@ def run_backtest_flow(algo, mode, cash):
     print("Annualized Return:", Evaluation.annualized_return(values))
     print("Sharpe Ratio:", Evaluation.sharpe(values))
     print("Max Drawdown:", Evaluation.max_drawdown(values))
+    print()
 
     return ledger
 
