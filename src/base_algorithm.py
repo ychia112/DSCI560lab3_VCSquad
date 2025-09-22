@@ -30,8 +30,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--start", 
         type=str, 
-        default="2022-01-01",
-        help="Start date (YYYY-MM-DD) [default: 2022-01-01]"
+        default="2025-01-01",
+        help="Start date (YYYY-MM-DD) [default: 2025-01-01]"
     )
     parser.add_argument(
         "--end", 
