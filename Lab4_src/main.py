@@ -12,7 +12,7 @@ from trading_env import TradingEnvironment, Evaluation
 # Helper Functions
 def load_prices(tickers):
     today = datetime.today().strftime("%Y-%m-%d")
-    data = yf.download(tickers, end=today, auto_adjust=False, progress=False)  
+    data = yf.download(tickers, start="2024-12-30", end=today, auto_adjust=False, progress=False)  
     prices_open = data["Open"]
     prices_close = data["Close"]
     return prices_open, prices_close
