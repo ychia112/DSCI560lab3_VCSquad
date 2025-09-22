@@ -6,15 +6,15 @@ from pathlib import Path
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 warnings.filterwarnings("ignore")
 
-TICKERS       = ["AAPL", "GOOG", "MSFT", "NFLX", "AMZN"]
-START         = "2015-01-01"
-END           = None
+TICKERS = ["AAPL", "GOOG", "MSFT", "NFLX", "AMZN"]
+START = "2015-01-01"
+END = None
 
-YEARS_AHEAD   = 2
-TRADING_DAYS  = 252
+YEARS_AHEAD = 2
+TRADING_DAYS = 252
 FORECAST_STEPS = YEARS_AHEAD * TRADING_DAYS
 
-TEST_DAYS     = 252  # Full trading year
+TEST_DAYS = 252  # Full trading year
 
 # Small, fast set of ARIMA orders; drift via trend = "t" to avoid flat forecast
 CANDIDATE_ORDERS = [(1,1,1), (0,1,1), (1,1,0), (2,1,1), (1,1,2), (2,1,0), (0,1,2)]
@@ -24,9 +24,9 @@ FIT_KW = dict(disp=False, method="lbfgs", maxiter=200)
 FAST_MA = 10
 SLOW_MA = 30
 
-OUTPUT_DIR    = # CHANGE: Your directory
-FORECAST_CSV  = "Stocks_prices.csv"
-SIGNALS_CSV   = "Stocks_signals.csv"
+OUTPUT_DIR = # CHANGE: Your directory
+FORECAST_CSV = "Stocks_prices.csv"
+SIGNALS_CSV = "Stocks_signals.csv"
 
 def safe_to_csv(frame: pd.DataFrame, path: str) -> str:
     try:
