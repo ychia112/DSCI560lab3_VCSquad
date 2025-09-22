@@ -24,8 +24,8 @@ FIT_KW = dict(disp=False, method="lbfgs", maxiter=200)
 FAST_MA = 10
 SLOW_MA = 30
 
-OUTPUT_DIR    = r"C:\Users\theka\Downloads"# Your directory to save csv
-FORECAST_CSV  = "Stocks_forecast.csv"
+OUTPUT_DIR    = # CHANGE: Your directory
+FORECAST_CSV  = "Stocks_prices.csv"
 SIGNALS_CSV   = "Stocks_signals.csv"
 
 def safe_to_csv(frame: pd.DataFrame, path: str) -> str:
@@ -65,7 +65,6 @@ def fit_quick_sarimax_with_drift(y: pd.Series):
     raise RuntimeError("No model converged.")
 
 def ma_crossover_signals(close: pd.Series, fast: int = FAST_MA, slow: int = SLOW_MA) -> pd.Series:
-    # Signal rule: buy if fast > slow, sell if fast < slow, else hold
     px = pd.to_numeric(close, errors="coerce").astype(float)
     fast_ma = px.rolling(fast).mean()
     slow_ma = px.rolling(slow).mean()
@@ -117,8 +116,9 @@ signals_df  = pd.DataFrame({"date": date_str})
 
 for t in TICKERS:
     if t not in histories:
-        forecast_df[t] = np.nan
-        signals_df[t]  = "hold"
+        forecast_df[f"{t}_actual"] = np.nan
+        forecast_df[f"{t}_pred"]   = np.nan
+        signals_df[t] = "hold"
         continue
 
     h = histories[t].set_index("Date")["Close"].astype(float)
@@ -126,11 +126,11 @@ for t in TICKERS:
     y = hist_aligned.dropna()
     if y.empty:
         print(f"[WARN] {t} has no valid history; skipping.")
-        forecast_df[t] = np.nan
-        signals_df[t]  = "hold"
+        forecast_df[f"{t}_actual"] = pd.to_numeric(hist_aligned, errors="coerce").round(2).values
+        forecast_df[f"{t}_pred"]   = np.nan
+        signals_df[t] = "hold"
         continue
 
-    # MAE on last trading year
     if len(y) > TEST_DAYS + 5:
         split = len(y) - TEST_DAYS
         y_train = y.iloc[:split]
@@ -143,7 +143,6 @@ for t in TICKERS:
                 index=y_test.index
             )
         except Exception:
-            # linear drift fallback
             tail  = y_train.tail(20)
             slope = (tail.iloc[-1] - tail.iloc[0]) / max(len(tail) - 1, 1) if len(tail) >= 2 else 0.0
             base  = y_train.iloc[-1]
@@ -177,20 +176,28 @@ for t in TICKERS:
     else:
         f_future = pd.Series(dtype=float)
 
-    # Combined close = actual history + future forecast (aligned to global_dates)
-    combined_close = hist_aligned.copy()
+    if res is not None:
+        ins = res.get_prediction(start=y.index[0], end=y.index[-1]).predicted_mean
+        ins_pred = pd.Series(ins.values, index=y.index)
+    else:
+        ins_pred = y.shift(1)
+        if len(ins_pred) > 0:
+            ins_pred.iloc[0] = y.iloc[0]
+
+    pred_series = pd.Series(index=global_dates, dtype=float)
+    pred_series.loc[ins_pred.index] = ins_pred.values
     if not f_future.empty:
-        combined_close.loc[f_future.index] = f_future.values
-    combined_close = combined_close.reindex(global_dates)
+        pred_series.loc[f_future.index] = f_future.values
+    pred_series = pred_series.reindex(global_dates)
 
-    forecast_df[t] = pd.to_numeric(combined_close, errors="coerce").round(2).values
+    forecast_df[f"{t}_actual"] = pd.to_numeric(hist_aligned, errors="coerce").round(2).values
+    forecast_df[f"{t}_pred"]   = pd.to_numeric(pred_series,   errors="coerce").round(2).values
 
-    # Simple MA-crossover signals
-    signals_df[t]  = ma_crossover_signals(combined_close).values
+    signals_df[t] = ma_crossover_signals(pred_series).values
 
 Path(OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
-f_path = safe_to_csv(forecast_df, os.path.join(OUTPUT_DIR, FORECAST_CSV))
+p_path = safe_to_csv(forecast_df, os.path.join(OUTPUT_DIR, FORECAST_CSV))
 s_path = safe_to_csv(signals_df,  os.path.join(OUTPUT_DIR, SIGNALS_CSV))
 
-print(f"Saved forecast to: {f_path}")
-print(f"Saved signals  to: {s_path}")
+print(f"Saved prices  to: {p_path}")
+print(f"Saved signals to: {s_path}")
